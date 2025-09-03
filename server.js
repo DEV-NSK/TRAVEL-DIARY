@@ -51,13 +51,14 @@ app.use(express.json());
 app.use("/uploads", express.static("uploads"));
 app.use(cors());
 app.use(morgan("dev"));
-app.use(errorHandler);
 
 app.use("/api/auth", require("./routes/authRoutes"));
 app.use("/api/users", userRoutes);
 app.use("/api/diary", require("./routes/diaryRoutes"));
 app.use("/api/comment", require("./routes/commentRoutes"));
 app.use("/api/admin", adminRoutes);
+
+app.use(errorHandler);
 
 app.get("/", (req, res) => res.send("Travel Diary API is running..."));
 

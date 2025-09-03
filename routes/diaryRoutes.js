@@ -293,5 +293,4 @@ router.get("/location/:place", async (req, res) => {
   }
 });
 
-// (keep rest of your routes unchanged)
 module.exports = router;
