@@ -41,11 +41,11 @@ router.get("/profile", auth, async (req, res) => {
 
 router.put("/profile", auth, async (req, res) => {
   try {
-    const { name, bio, profilePic } = req.body;
+    const { name, bio, profilePic, location } = req.body;
 
     const updatedUser = await User.findByIdAndUpdate(
       req.user.id,
-      { name, bio, profilePic },
+      { name, bio, profilePic, location },
       { new: true, runValidators: true }
     ).select("-password");
 
