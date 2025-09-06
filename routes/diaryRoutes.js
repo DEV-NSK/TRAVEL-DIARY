@@ -144,10 +144,6 @@
 
 // // // // // // // module.exports = router;
 
-
-
-
-
 // // // // // // const express = require("express");
 // // // // // // const router = express.Router();
 // // // // // // const auth = require("../middleware/authMiddleware");
@@ -294,8 +290,6 @@
 // // // // // // });
 
 // // // // // // module.exports = router;
-
-
 
 // // // // // const express = require("express");
 // // // // // const router = express.Router();
@@ -464,10 +458,6 @@
 
 // // // // // module.exports = router;
 
-
-
-
-
 // // // const express = require("express");
 // // // const router = express.Router();
 // // // const auth = require("../middleware/authMiddleware");
@@ -634,13 +624,6 @@
 // // // });
 
 // // // module.exports = router;
-
-
-
-
-
-
-
 
 // // const express = require("express");
 // // const router = express.Router();
@@ -822,27 +805,14 @@
 
 // module.exports = router;
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 const express = require("express");
 const router = express.Router();
-const auth = require("../middleware/authMiddleware");
-const DiaryEntry = require("../models/DiaryEntry");
+const auth = require("../middleware/authMiddleware.js");
+const DiaryEntry = require("../models/DiaryEntry.js");
 const multer = require("multer");
 const path = require("path");
 const fs = require("fs");
+const { uploadToCloudinary } = require("../utils/cloudinary.js");
 
 // ------------------ Ensure uploads folder exists ------------------
 if (!fs.existsSync("uploads")) {
@@ -861,20 +831,50 @@ const storage = multer.diskStorage({
 const upload = multer({ storage });
 
 // ------------------ CREATE a diary post ------------------
+// router.post("/", auth, upload.array("media", 5), async (req, res) => {
+//   try {
+//     const { title, description, location } = req.body;
+//     const media = req.files ? req.files.map((file) => file.filename) : [];
+
+//     const diaryEntry = new DiaryEntry({
+//       user: req.user.id,
+//       title,
+//       description,
+//       location,
+//       media,
+//     });
+
+//     await diaryEntry.save();
+//     res.status(201).json({ msg: "Diary created successfully", diaryEntry });
+//   } catch (err) {
+//     console.error("Error saving diary:", err);
+//     res.status(500).json({ msg: "Server error", error: err.message });
+//   }
+// });
+
 router.post("/", auth, upload.array("media", 5), async (req, res) => {
   try {
     const { title, description, location } = req.body;
-    const media = req.files ? req.files.map((file) => file.filename) : [];
+    let mediaUrls = [];
 
+    if (req.files && req.files.length > 0) {
+      // Upload all files to Cloudinary in parallel
+      mediaUrls = await Promise.all(
+        req.files.map((file) => uploadToCloudinary(file.path))
+      );
+    }
+
+    // Save to MongoDB with Cloudinary URLs
     const diaryEntry = new DiaryEntry({
       user: req.user.id,
       title,
       description,
       location,
-      media,
+      media: mediaUrls,
     });
 
     await diaryEntry.save();
+
     res.status(201).json({ msg: "Diary created successfully", diaryEntry });
   } catch (err) {
     console.error("Error saving diary:", err);
@@ -981,7 +981,9 @@ router.delete("/:id", auth, async (req, res) => {
     if (!post) return res.status(404).json({ msg: "Post not found" });
 
     if (post.user.toString() !== req.user.id && req.user.role !== "admin") {
-      return res.status(403).json({ msg: "Not authorized to delete this post" });
+      return res
+        .status(403)
+        .json({ msg: "Not authorized to delete this post" });
     }
 
     await post.deleteOne();
@@ -1017,12 +1019,6 @@ router.put("/like/:id", auth, async (req, res) => {
 
 module.exports = router;
 
-
-
-
-
-
-
 // const express = require("express");
 // const router = express.Router();
 // const auth = require("../middleware/authMiddleware");
@@ -1033,7 +1029,7 @@ module.exports = router;
 // router.post("/", auth, upload.array("media", 5), async (req, res) => {
 //   try {
 //     const { title, description, location } = req.body;
-    
+
 //     // Get Cloudinary URLs from uploaded files
 //     const media = req.files ? req.files.map((file) => file.path) : [];
 
@@ -1049,7 +1045,7 @@ module.exports = router;
 //     res.status(201).json({ msg: "Diary created successfully", diaryEntry });
 //   } catch (err) {
 //     console.error("Error saving diary:", err);
-    
+
 //     // Clean up uploaded files if there's an error
 //     if (req.files && req.files.length > 0) {
 //       for (const file of req.files) {
@@ -1063,7 +1059,7 @@ module.exports = router;
 //         }
 //       }
 //     }
-    
+
 //     res.status(500).json({ msg: "Server error", error: err.message });
 //   }
 // });
@@ -1140,7 +1136,7 @@ module.exports = router;
 //   try {
 //     const { title, description, location, existingMedia } = req.body;
 //     const post = await DiaryEntry.findById(req.params.id);
-    
+
 //     if (!post) return res.status(404).json({ msg: "Post not found" });
 //     if (post.user.toString() !== req.user.id) {
 //       return res.status(403).json({ msg: "Not authorized" });
@@ -1148,12 +1144,12 @@ module.exports = router;
 
 //     // Handle new media uploads
 //     const newMedia = req.files ? req.files.map((file) => file.path) : [];
-    
+
 //     // Parse existing media (if provided as string array)
 //     let existingMediaArray = [];
 //     if (existingMedia) {
-//       existingMediaArray = Array.isArray(existingMedia) 
-//         ? existingMedia 
+//       existingMediaArray = Array.isArray(existingMedia)
+//         ? existingMedia
 //         : JSON.parse(existingMedia);
 //     }
 
@@ -1230,14 +1226,6 @@ module.exports = router;
 
 // module.exports = router;
 
-
-
-
-
-
-
-
-
 // const express = require("express");
 // const router = express.Router();
 // const auth = require("../middleware/authMiddleware");
@@ -1248,7 +1236,7 @@ module.exports = router;
 // router.post("/", auth, upload.array("media", 5), async (req, res) => {
 //   try {
 //     const { title, description, location } = req.body;
-    
+
 //     // Get Cloudinary URLs from uploaded files
 //     const media = req.files ? req.files.map((file) => file.path) : [];
 
@@ -1264,7 +1252,7 @@ module.exports = router;
 //     res.status(201).json({ msg: "Diary created successfully", diaryEntry });
 //   } catch (err) {
 //     console.error("Error saving diary:", err);
-    
+
 //     // Clean up uploaded files if there's an error
 //     if (req.files && req.files.length > 0) {
 //       for (const file of req.files) {
@@ -1278,7 +1266,7 @@ module.exports = router;
 //         }
 //       }
 //     }
-    
+
 //     res.status(500).json({ msg: "Server error", error: err.message });
 //   }
 // });
@@ -1355,7 +1343,7 @@ module.exports = router;
 //   try {
 //     const { title, description, location, existingMedia } = req.body;
 //     const post = await DiaryEntry.findById(req.params.id);
-    
+
 //     if (!post) return res.status(404).json({ msg: "Post not found" });
 //     if (post.user.toString() !== req.user.id) {
 //       return res.status(403).json({ msg: "Not authorized" });
@@ -1363,12 +1351,12 @@ module.exports = router;
 
 //     // Handle new media uploads
 //     const newMedia = req.files ? req.files.map((file) => file.path) : [];
-    
+
 //     // Parse existing media (if provided as string array)
 //     let existingMediaArray = [];
 //     if (existingMedia) {
-//       existingMediaArray = Array.isArray(existingMedia) 
-//         ? existingMedia 
+//       existingMediaArray = Array.isArray(existingMedia)
+//         ? existingMedia
 //         : JSON.parse(existingMedia);
 //     }
 
